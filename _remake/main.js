@@ -60,12 +60,14 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // add better logging
-app.use(morgan("common", {
-  skip: function (req, res) {
-    // ignore polling from live.js (live reloading script)
-    return req.get("From-Livejs") === "true";
-  }
-}));
+app.use(
+  morgan("common", {
+    skip: function (req, res) {
+      // ignore polling from live.js (live reloading script)
+      return req.get("From-Livejs") === "true";
+    },
+  })
+);
 
 // extract appName from host and attach it to request object
 // important: show error if multi-tenant is enabled and there's no app name
@@ -197,9 +199,9 @@ app.use(
     store: new FileStore({
       path: path.join(__dirname, "./.sessions"),
       ttl: thirtyDaysInSec,
-      retries: 5
+      retries: 5,
     }),
-    name: RemakeStore.isDevelopmentMode() ? (packageJson.name || "connect.sid") : "connect.sid",
+    name: RemakeStore.isDevelopmentMode() ? packageJson.name || "connect.sid" : "connect.sid",
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
