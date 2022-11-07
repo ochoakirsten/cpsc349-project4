@@ -4,16 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your App</title>
-  <link rel="stylesheet" type="text/css" href="./assets/css/_remake.css">
-  <link rel="stylesheet" type="text/css" href="./assets/css/main.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/_remake.css">
+  <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
 </head>
 <body>
   {{#if currentUser}}
     <a href="/user/logout">Logout</a>
   {{else}}
-    <a class="nav__button" href="/user/signup">Sign up</a>
-    &nbsp;
-    <a class="nav__button" href="/user/login">Log in</a>
+    <nav class="w-full bg-gray-300 py-6 justify-between flex px-6 border-b-black border">
+      <a class="font-medium" href="/">Reading List App</a>
+      <div class="space-x-6">
+        <a class="bg-blue-400 p-2 rounded-md font-medium hover:bg-blue-500 text-white" href="/user/signup">Sign up</a>
+        <a class="bg-blue-400 p-2 rounded-md font-medium hover:bg-blue-500 text-white" href="/user/login">Log in</a>
+      <div>
+    </nav>
   {{/if}}
   {{!-- Show errors --}}
   {{#if flashErrors }}
