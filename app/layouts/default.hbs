@@ -9,17 +9,16 @@
 </head>
 <body>
   {{#if currentUser}}
-    <nav class="w-full bg-gray-900 py-6 justify-between flex px-8">
+    <nav class="w-full bg-gray-900 py-6 justify-between flex items-center px-8">
       <a class="font-medium text-white" href="/">Reading List App</a>
-      <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/login">Log in</a>
+      <div>
+        <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/logout">Logout</a>
+      <div>
     </nav>
   {{else}}
     <nav class="w-full bg-gray-900 py-6 justify-between flex px-8">
       <a class="font-medium text-white" href="/">Reading List App</a>
-      <div class="space-x-6">
-        <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/signup">Sign up</a>
-        <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/login">Log in</a>
-      <div>
+
     </nav>
   {{/if}}
   {{!-- Show errors --}}

@@ -594,6 +594,10 @@ video {
   max-width: 28rem;
 }
 
+.items-center {
+  align-items: center;
+}
+
 .justify-end {
   justify-content: flex-end;
 }
