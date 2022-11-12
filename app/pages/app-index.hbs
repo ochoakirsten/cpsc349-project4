@@ -1,4 +1,49 @@
-<h1 class="text-3xl font-bold underline text-blue-700">Welcome to the app!</h1>
-<div>[[ Dynamic Remake code goes here]]</div>
-<br><br>
-<a href="https://docs.remaketheweb.com/a-simple-example-app/">Try a simple todo app</a>
+<main class="max-w-3xl mx-auto" object>
+    <div class="mt-6 space-y-2">
+        <h1 class="text-3xl font-bold">{{pageAuthor.details.username}}&apos;s Reading List</h1>
+        <p class="text-medium text-gray-500 {{#if currentUser}}hover:bg-gray-200{{/if}}"
+            object key:bio="@innerText" edit:bio:without-remove default:bio="This user has not entered a bio yet.">This user has not entered a bio yet.</p>
+    </div>
+
+    <div array key="subjects">
+        {{#for subject in subjects}}
+        <section object key:title="@search">
+            {{!-- subject title --}}
+            <div class="flex justify-between items-baseline space-y-12 border-b-2 pb-2">
+                <h3 target:title="@innerText" edit-control-hide edit:title
+                    class="text-xl font-medium {{#if currentUser}}hover:bg-gray-200{{/if}}">{{default subject.title "New Subject"}}</h3>
+                <button class="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700" new:subreading>New Reading</button>
+            </div>
+
+            {{!-- subject reading list --}}
+            <div array key="subreading"
+                class="mt-6 w-full space-y-6">
+                {{#for subreading in subject.subreadings}}
+                    <div
+                        object key:name="@search"
+                        class="p-4 bg-gray-900 text-white w-full rounded-md space-y-2">
+                        <div class="flex justify-between">
+                            <h4 target:name="@innerText" edit:name
+                                class="font-medium {{#if currentUser}}hover:bg-gray-700{{/if}}">
+                                {{default subreading.name "New Reading"}}
+                            </h4>
+                            <p key:link="@innerText" edit:link:without-remove object
+                                class="text-gray-500 {{#if currentUser}}hover:bg-gray-700{{/if}}">
+                                {{default subreading.link "http://localhost:5000"}}
+                            </p>
+                        </div>
+                        <p key:desc="@innerText" edit:desc:without-remove object
+                            class="text-gray-400 {{#if currentUser}}hover:bg-gray-700{{/if}}">
+                            {{default subreading.desc "Short description of reading!"}}
+                        </p>
+                    </div>
+                {{/for}}
+            </div>
+        </section>
+        {{/for}}
+    </div>
+
+    <div class="flex justify-end mt-8">
+        <button class="px-3 py-2 bg-gray-700 text-white rounded-full hover:bg-gray-500" new:subject edit-control-hide>Add A New Subject</button>
+    </div>
+</main>
