@@ -3,19 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your App</title>
+  <title>Group 21 - Project 2</title>
   <link rel="stylesheet" type="text/css" href="/assets/css/_remake.css">
   <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
 </head>
 <body>
   {{#if currentUser}}
-    <a href="/user/logout">Logout</a>
+    <nav class="w-full bg-gray-900 py-6 justify-between flex px-8">
+      <a class="font-medium text-white" href="/">Reading List App</a>
+      <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/login">Log in</a>
+    </nav>
   {{else}}
-    <nav class="w-full bg-gray-300 py-6 justify-between flex px-6 border-b-black border">
-      <a class="font-medium" href="/">Reading List App</a>
+    <nav class="w-full bg-gray-900 py-6 justify-between flex px-8">
+      <a class="font-medium text-white" href="/">Reading List App</a>
       <div class="space-x-6">
-        <a class="bg-blue-400 p-2 rounded-md font-medium hover:bg-blue-500 text-white" href="/user/signup">Sign up</a>
-        <a class="bg-blue-400 p-2 rounded-md font-medium hover:bg-blue-500 text-white" href="/user/login">Log in</a>
+        <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/signup">Sign up</a>
+        <a class="bg-gray-700 p-2 rounded-md font-medium hover:bg-gray-500 text-white" href="/user/login">Log in</a>
       <div>
     </nav>
   {{/if}}
