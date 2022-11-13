@@ -9,14 +9,14 @@
         {{#for subject in subjects}}
         <section object key:title="@search">
             {{!-- subject title --}}
-            <div class="flex justify-between items-baseline space-y-12 border-b-2 pb-2">
+            <div class="flex justify-between items-baseline space-y-12 border-b-2 pb-2 mt-8">
                 <h3 target:title="@innerText" edit-control-hide edit:title
                     class="text-xl font-medium {{#if currentUser}}hover:bg-gray-200{{/if}}">{{default subject.title "New Subject"}}</h3>
-                <button class="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700" new:subreading>New Reading</button>
+                    <button class="p-2 bg-gray-900 text-white rounded-md hover:bg-gray-700" new:subreading>New Reading</button>
             </div>
 
             {{!-- subject reading list --}}
-            <div array key="subreading"
+            <div array key="subreadings"
                 class="mt-6 w-full space-y-6">
                 {{#for subreading in subject.subreadings}}
                     <div
@@ -43,7 +43,9 @@
         {{/for}}
     </div>
 
+    {{#if isPageAuthor}}
     <div class="flex justify-end mt-8">
         <button class="px-3 py-2 bg-gray-700 text-white rounded-full hover:bg-gray-500" new:subject>Add A New Subject</button>
     </div>
+    {{/if}}
 </main>
