@@ -1025,8 +1025,8 @@ video {
   display: grid;
 }
 
-.h-4 {
-  height: 1rem;
+.h-8 {
+  height: 2rem;
 }
 
 .h-screen {
@@ -1041,8 +1041,8 @@ video {
   width: 100%;
 }
 
-.w-4 {
-  width: 1rem;
+.w-8 {
+  width: 2rem;
 }
 
 .w-12 {
@@ -1254,10 +1254,6 @@ video {
 
 .font-bold {
   font-weight: 700;
-}
-
-.font-light {
-  font-weight: 300;
 }
 
 .leading-tight {
