@@ -8,6 +8,14 @@ console.log(authData)
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
 
+
+//creating data
+const data = {
+    "title": "test"
+};
+
+const record = await pb.collection('reading_list').create(data)
+
 root.render(
   <React.StrictMode>
     <App />
