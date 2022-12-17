@@ -1,255 +1,823 @@
-# 2.6.0 (December 30, 2022)
+## v0.9.2
 
-- Allowing multiple Remake apps to run on localhost at the same time
-- FIXED: randomly being logged out from a Remake app because session not destroyed
-- Allow passing in sortableOptions when initializing Remake
-- Update `esbuild` so it works on m1 macs 
-- FIXED: Don't save twice. Removed save when syncing data into page, since setting keys saves anyways
+- Fixed field column name conflict on record deletion ([#1220](https://github.com/pocketbase/pocketbase/discussions/1220)).
 
 
-# 2.5.8 (October 4, 2021)
+## v0.9.1
 
-- Made [main README](https://github.com/remake/remake-framework/blob/master/README.md) simpler & easier to read
-- Update all NPM packages to secure versions after running `npm audit` (for both the CLI and the framework)
-- Bug fixes
-  - Fixed unresolved passport callbacks
-  - Prevent live.js from reloading the page when new data is saved
-  - Not setting NODE_ENV to "development" mode by default
+- Moved the record file upload and delete out of the db transaction to minimize the locking times.
 
-# 2.5.7 (October 2, 2021)
+- Added `Dao` query semaphore and base fail/retry handling to improve the concurrent writes throughput ([#1187](https://github.com/pocketbase/pocketbase/issues/1187)).
 
-- Update to Remake's CLI: when updating the framework, also update package.json (fields: "ava", "scripts", "nodemonConfig", "husky", "dependencies", "devDependencies"
-- live reload with live.js (much better than the old way)
-  - add live.js (live reload) script to Remake
-  - prevent logging requests from live.js
-  - remove old, slow auto-reload code
-  - prevent nodemon from reload the server on html/css changes
-  - make nodemon ignore entire app/ directory
+- Fixed records cascade deletion when there are "A<->B" relation references.
 
-# 2.4.7 (June 26, 2021)
+- Replaced `c.QueryString()` with `c.QueryParams().Encode()` to allow loading middleware modified query parameters in the default crud actions ([#1210](https://github.com/pocketbase/pocketbase/discussions/1210)).
 
-- Update to Remake's CLI: show error for registerUser client-side if there is one
+- Fixed the datetime field not triggerering the `onChange` event on manual field edit and added a "Clear" button ([#1219](https://github.com/pocketbase/pocketbase/issues/1219)).
 
-# 2.4.6 (June 10, 2021)
+- Updated the GitHub goreleaser action to use go 1.19.4 since it comes with [some security fixes](https://github.com/golang/go/issues?q=milestone%3AGo1.19.4+label%3ACherryPickApproved).
 
-- If the current port is in use, make the Remake server choose a new one at random
-- Add Remake's first 3 tests!
-  - Make it so Remake's client-side code can run inside Node.js
-- Expand the element properties (e.g. `autofocus`, `contentEditable`) that can be gotten and set from an element using Remake
 
-# 2.4.5 (June 10, 2021)
+## v0.9.0
 
-- Provide a `{{cacheBustString}}` variable so dev can easily break CSS and JS from browser cache
-  - To read more about cache busting: https://css-tricks.com/strategies-for-cache-busting-css/
-- Allow `Remake.init()` to be called more than once on a page
-  - Useful for the Remake client-side demo: https://codepen.io/panphora/pen/rNMVYZz
-- Pass `triggerEditOnElem` to `_defaultAddItemCallback` when it's overwritten, so user can trigger the edit popover when a new item has been added to the page
-- Fixed bug: Not able to import `lodash-es` or `deepdash-es`
+- Fixed concurrent multi-relation cascade update/delete ([#1138](https://github.com/pocketbase/pocketbase/issues/1138)).
 
-# 2.4.1 (May 7, 2021)
+- Added the raw OAuth2 user data (`meta.rawUser`) and OAuth2 access token (`meta.accessToken`) to the auth response ([#654](https://github.com/pocketbase/pocketbase/discussions/654)).
 
-- The Remake CLI will now install missing npm packages after the user updates the framework using `remake update-framework`
+- `BaseModel.UnmarkAsNew()` method was renamed to `BaseModel.MarkAsNotNew()`.
+  Additionally, to simplify the insert model queries with custom IDs, it is no longer required to call `MarkAsNew()` for manually initialized models with set ID since now this is the default state.
+  When the model is populated with values from the database (eg. after row `Scan`) it will be marked automatically as "not new".
 
-# 2.4.0 (May 4, 2021)
+- Added `Record.OriginalCopy()` method that returns a new `Record` copy populated with the initially loaded record data (useful if you want to compare old and new field values).
 
-- Generate unique ids for new items automatically 🧙‍♂️
-- Added an attribute argument `:edit` for the `new:` attribute (e.g. use like this: `new:example-item:edit`). It automatically triggers an edit popover when a new item is created!
-- Fixed bug: Remake wasn't nesting data that's grabbed from the DOM in a consistent way
-- Added Prettier and formatted all code to look nicer
-- Getting DOM data with `getSaveData()` now works server-side
+- Added new event hooks:
+  ```go
+  app.OnBeforeBootstrap()
+  app.OnAfterBootstrap()
+  app.OnBeforeApiError()
+  app.OnAfterApiError()
+  app.OnRealtimeDisconnectRequest()
+  app.OnRealtimeBeforeMessageSend()
+  app.OnRealtimeAfterMessageSend()
+  app.OnRecordBeforeRequestPasswordResetRequest()
+  app.OnRecordAfterRequestPasswordResetRequest()
+  app.OnRecordBeforeConfirmPasswordResetRequest()
+  app.OnRecordAfterConfirmPasswordResetRequest()
+  app.OnRecordBeforeRequestVerificationRequest()
+  app.OnRecordAfterRequestVerificationRequest()
+  app.OnRecordBeforeConfirmVerificationRequest()
+  app.OnRecordAfterConfirmVerificationRequest()
+  app.OnRecordBeforeRequestEmailChangeRequest()
+  app.OnRecordAfterRequestEmailChangeRequest()
+  app.OnRecordBeforeConfirmEmailChangeRequest()
+  app.OnRecordAfterConfirmEmailChangeRequest()
+  ```
 
-# 2.3.3 (January 15, 2021)
+- The original uploaded file name is now stored as metadata under the `original_filename` key. It could be accessed via:
+  ```go
+  fs, _ := app.NewFilesystem()
+  defer fs.Close()
 
-- Don't allow Remake to be initialized more than once
+  attrs, _ := fs.Attributes(fikeKey)
+  attrs.Metadata["original_name"]
+  ```
 
-# 2.3.2 (November 28, 2020)
+- Added support for `Partial/Range` file requests ([#1125](https://github.com/pocketbase/pocketbase/issues/1125)).
+  This is a minor breaking change if you are using `filesystem.Serve` (eg. as part of a custom `OnFileDownloadRequest` hook):
+  ```go
+  // old
+  filesystem.Serve(res, e.ServedPath, e.ServedName)
 
-- Fixed bug on Windows causing the `remake create` command to not work ([See the fix](https://stackoverflow.com/a/16951241/87432))
+  // new
+  filesystem.Serve(res, req, e.ServedPath, e.ServedName)
+  ```
 
-# 2.3.1 (November 23, 2020)
+- Refactored the `migrate` command to support **external JavaScript migration files** using an embedded JS interpreter ([goja](https://github.com/dop251/goja)).
+  This allow writting custom migration scripts such as programmatically creating collections,
+  initializing default settings, running data imports, etc., with a JavaScript API very similar to the Go one (_more documentation will be available soon_).
 
-- Added support for generating two more starter apps:
-  - Resume/CV builder
-  - Reading list sharer app
+  The `migrate` command is available by default for the prebult executable,
+  but if you use PocketBase as framework you need register it manually:
+  ```go
+  migrationsDir := "" // default to "pb_migrations" (for js) and "migrations" (for go)
 
-# 2.2.0 (November 20, 2020)
+  // load js files if you want to allow loading external JavaScript migrations
+  jsvm.MustRegisterMigrations(app, &jsvm.MigrationsOptions{
+    Dir: migrationsDir,
+  })
 
-- **BIG CHANGE:** Generating unique ids for every object is now turned off by default. These ids were confusing and unhelpful to a lot of people. Remake will always support unique ids, however. Until we come up with a more elegant solution, you can turn them back on by editing your `.remake` file and adding the line: `"generateUniqueIds": true`
-- Added new handlebars helper `checked` to set the `checked` attribute of a `<input type="checked">` element. You pass in a value and it generates a `checked="checked"` attribute if the value is truthy. Use it like this: `{{{checked todo.done}}}`.
-- Added new `run:watch` attribute. When it's attached to an element with `watch:` attributes, those watch attributes will be triggered as soon as the page loads
-- Added new `prevent-default` attribute for preventing a DOM element's default behavior
-- Added `onRemoveItem()` callback
-- Changed the values that the `toggle` attribute and `<input type="checkbox">` element toggle between. Now it's "true" and "false" instead of "on" and "off".
-- Added some default watch functions that you can use to handle computations and set data:
-  - `setMailToLink`: for setting an `href` attribute to a `mailto:` email link
-  - `setLink`: for setting an `href` attribute to a valid link that has `"https://"` prepended
-  - `countKeys`: counts the number of keys that match the current key, filters out any with falsey values, and uses the passed in `selector` element to update another element with this count
-  - `sumKeyValues`: sums the number values of keys that match the current key and uses the passed in `selector` element to update another element with this sum
-- FIX BUG: deleting all the content from a user's `user-app-data` json file won't stall the app. The data will just default to an empty object.
+  // register the `migrate` command
+  migratecmd.MustRegister(app, app.RootCmd, &migratecmd.Options{
+    TemplateLang: migratecmd.TemplateLangJS, // or migratecmd.TemplateLangGo (default)
+    Dir:          migrationsDir,
+    Automigrate:  true,
+  })
+  ```
 
-# 2.1.2 (November 18, 2020)
+  **The refactoring also comes with automigrations support.**
 
-- Remake has support for custom domains! 🎉
-- Added `remake custom-domain` command
-- Fixed bug: `callWatchFunctionsOnElements()` wasn't working
-- Fixed bug: allow `edit:` attribute to get last to args in any order
-- Fixed minor issue with CLI message text
-- Updated README
+  If `Automigrate` is enabled (`true` by default for the prebuilt executable; can be disabled with `--automigrate=0`),
+  PocketBase will generate seamlessly in the background JS (or Go) migration file with your collection changes.
+  **The directory with the JS migrations can be committed to your git repo.**
+  All migrations (Go and JS) are automatically executed on server start.
+  Also note that the auto generated migrations are granural (in contrast to the `migrate collections` snapshot command)
+  and allow multiple developers to do changes on the collections independently (even editing the same collection) miniziming the eventual merge conflicts.
+  Here is a sample JS migration file that will be generated if you for example edit a single collection name:
+  ```js
+  // pb_migrations/1669663597_updated_posts_old.js
+  migrate((db) => {
+    // up
+    const dao = new Dao(db)
+    const collection = dao.findCollectionByNameOrId("lngf8rb3dqu86r3")
+    collection.name = "posts_new"
+    return dao.saveCollection(collection)
+  }, (db) => {
+    // down
+    const dao = new Dao(db)
+    const collection = dao.findCollectionByNameOrId("lngf8rb3dqu86r3")
+    collection.name = "posts_old"
+    return dao.saveCollection(collection)
+  })
+  ```
 
-# 2.0.3 (November 16, 2020)
+- Added new `Dao` helpers to make it easier fetching and updating the app settings from a migration:
+  ```go
+  dao.FindSettings([optEncryptionKey])
+  dao.SaveSettings(newSettings, [optEncryptionKey])
+  ```
 
-- Fix `remake-build` internal build process to use correct source mapping url for "remake.min.js" script
+- Moved `core.Settings` to `models/settings.Settings`:
+  ```
+  core.Settings{}           -> settings.Settings{}
+  core.NewSettings()        -> settings.New()
+  core.MetaConfig{}         -> settings.MetaConfig{}
+  core.LogsConfig{}         -> settings.LogsConfig{}
+  core.SmtpConfig{}         -> settings.SmtpConfig{}
+  core.S3Config{}           -> settings.S3Config{}
+  core.TokenConfig{}        -> settings.TokenConfig{}
+  core.AuthProviderConfig{} -> settings.AuthProviderConfig{}
+  ```
 
-# 2.0.2 (November 11, 2020)
+- Changed the `mailer.Mailer` interface (**minor breaking if you are sending custom emails**):
+  ```go
+  // Old:
+  app.NewMailClient().Send(from, to, subject, html, attachments?)
 
-- Remove 10 unused NPM packages
-- Update 2 outdated NPM packages
-- Fix bug: You can now use #for loops in partial templates (oops!)
-- Simplified signature of `Remake.callSaveFunction()` so you can just pass in an HTML element instead of an object
+  // New:
+  app.NewMailClient().Send(&mailer.Message{
+    From: from,
+    To: to,
+    Subject: subject,
+    HTML: html,
+    Attachments: attachments,
+    // new configurable fields
+    Bcc: []string{"bcc1@example.com", "bcc2@example.com"},
+    Cc: []string{"cc1@example.com", "cc2@example.com"},
+    Headers: map[string]string{"Custom-Header": "test"},
+    Text: "custom plain text version",
+  })
+  ```
+  The new `*mailer.Message` struct is also now a member of the `MailerRecordEvent` and `MailerAdminEvent` events.
 
-# 2.0.1 (November 8, 2020)
+- Other minor UI fixes and improvements
 
-- Major update to README
-- Multi-tenant fixes: uploading and saving data to correct directories
 
-# 2.0.0 (November 7, 2020) 🚀
+## v0.8.0
 
-- Brand new syntax: https://recipes.remaketheweb.com/
-- Brand new, much simpler directory structure
-- [Read the migration guide](https://docs.google.com/document/d/1dXM7cgyg0W5M7im2RfexSsX9Gn6EfAbtY-kTp__H3A4/edit?usp=sharing)
+**⚠️ This release contains breaking changes and requires some manual migration steps!**
 
-# 1.11.2 (August 9, 2020)
+The biggest change is the merge of the `User` models and the `profiles` collection per [#376](https://github.com/pocketbase/pocketbase/issues/376).
+There is no longer `user` type field and the users are just an "auth" collection (we now support **collection types**, currently only "base" and "auth").
+This should simplify the users management and at the same time allow us to have unlimited multiple "auth" collections each with their own custom fields and authentication options (eg. staff, client, etc.).
 
-- Deprecated old repositories (https://github.com/panphora/remake & https://github.com/panphora/remake-framework) and switched them to the new official "remake" organization (https://github.com/remake/remake & https://github.com/remake/remake-framework)
-- Moved the documentation website outside the CLI repository (https://github.com/remake/remake-docs)
+In addition to the `Users` and `profiles` merge, this release comes with several other improvements:
 
-# 1.11.0 (July 6, 2020)
+- Added indirect expand support [#312](https://github.com/pocketbase/pocketbase/issues/312#issuecomment-1242893496).
 
-- Breaking change: Renamed `username.hbs` to `app-index.hbs` (so it's clearer that it's supposed to be the dynamic home page of the app)
+- The `json` field type now supports filtering and sorting [#423](https://github.com/pocketbase/pocketbase/issues/423#issuecomment-1258302125).
 
-* Added ability to include an `{{else}}` clause in a `{{for}}` loop for when there are no items to iterate over
-* Small change: Made adding a layout to a page have more forgiving syntax (no longer requires spaces between braces)
-* Added an empty Remake app to `/_remake/empty-project` so users can get started more quickly with their own projects
-* Added better README files to every directory of both the starter Remake app and the blank Remake app 🤩
+- The `relation` field now allows unlimitted `maxSelect` (aka. without upper limit).
 
-# 1.10.1 (June 24, 2020)
+- Added support for combined email/username + password authentication (see below `authWithPassword()`).
 
-- Massively improved the onboarding for new users by adding README files to each directory of the Remake starter app
-- Added a nice getting started message showing users where to access the app after it starts up
-- Updated npm dependencies to get rid of console warnings: both `caniuse-lite` and `shelljs` were causing issues
-- Breaking change: Renamed the `asset-bundler/` directory to `_remake-asset-bundler` to differentiate it from files that are modifiable by the user
-- Fixed: The `remake backup` command now works for file uploads
+- Added support for full _"manager-subordinate"_ users management, including a special API rule to allow directly changing system fields like email, password, etc. without requiring `oldPassword` or other user verification.
 
-_Important:_ If you're updating from an older version of Remake using the `remake update-framework` command, do this:
+- Enabled OAuth2 account linking on authorized request from the same auth collection (_this is useful for example if the OAuth2 provider doesn't return an email and you want to associate it with the current logged in user_).
 
-1. Run `remake update-framework`
-2. Make sure all the dependencies from `https://github.com/remake/remake-framework/blob/master/package.json` are in your own `package.json`
-3. Rename the `asset-bundler` directory to `_remake-asset-bundler`
+- Added option to toggle the record columns visibility from the table listing.
 
-You may also need to run `npm rebuild` if you get an error like `"Error: Could not locate the bindings file."`.
+- Added support for collection schema fields reordering.
 
-Sorry about this. It'll be easier to update in the future.
+- Added several new OAuth2 providers (Microsoft Azure AD, Spotify, Twitch, Kakao).
 
-# 1.10.0 (April 15, 2020)
+- Improved memory usage on large file uploads [#835](https://github.com/pocketbase/pocketbase/discussions/835).
 
-- Implemented file upload, which only requires a few lines of code to get working! (max file size 50MB by default)
+- More detailed API preview docs and site documentation (the repo is located at https://github.com/pocketbase/site).
 
+- Other minor performance improvements (mostly related to the search apis).
+
+### Migrate from v0.7.x
+
+- **[Data](#data)**
+- **[SDKs](#sdks)**
+- **[API](#api)**
+- **[Internals](#internals)**
+
+#### Data
+
+The merge of users and profiles comes with several required db changes.
+The easiest way to apply them is to use the new temporary `upgrade` command:
+
+```sh
+# make sure to have a copy of your pb_data in case something fails
+cp -r ./pb_data ./pb_data_backup
+
+# run the upgrade command
+./pocketbase08 upgrade
+
+# start the application as usual
+./pocketbase08 serve
 ```
-<div data-o-type="object" data-l-key-uploaded-image>
-  <input data-i type="file" name="uploadedImage">
-  <img data-l-target-uploaded-image src="{{uploadedImage}}">
-</div>
-```
 
-- Added a few helper file upload features:
-  - Upload progress notification
-  - Callbacks for file upload events
-- Changed the way the `data-i` attribute works
-  - By default it triggers a save unless its value is set to `dontTriggerSaveOnChange`
-  - For `input[type="text"]` and `textarea` elements, the save is debounced by 800ms, so it doesn't trigger too often
-- IMPROVEMENT: `data-l-key-` (i.e. location key) attributes are now smarter about how they set data. They'll set the `innerText` of most elements (as usual), but default to setting the `src` attribute on `<img>`, `<audio>`, `<video>`, `<iframe>`, and `<script>` elements, and the `href` attribute on `<link>` elements
-- BUG FIX: elements with a `data-i` attribute now sets data on both `data-o-key-` and `data-l-key-` attributes and not just `data-o-key-` attributes
-- Re-architected front-end Remake library, separating out data manipulation methods into `_remake/client-side/data-utilities/`. As part of this rearchitecture, we created two very useful low-level methods: `getValueFromClosestKey` and `setValueOfClosestKey`
+The upgrade command:
 
-# 1.9.0 (December 1, 2019)
+- Creates a new `users` collection with merged fields from the `_users` table and the `profiles` collection.
+  The new user records will have the ids from the `profiles` collection.
+- Changes all `user` type fields to `relation` and update the references to point to the new user ids.
+- Renames all `@collection.profiles.*`, `@request.user.*` and `@request.user.profile.*` filters to `@collection.users.*` and `@request.auth.*`.
+- Appends `2` to all **schema field names** and **api filter rules** that conflicts with the new system reserved ones:
+  ```
+  collectionId   => collectionId2
+  collectionName => collectionName2
+  expand         => expand2
 
-- Added the `remake backup` command to backup a deployed app's data
-- BUG FIX: the `/user/reset/{username}/{token}` route now works in multi-tenant mode
+  // only for the "profiles" collection fields:
+  username               => username2
+  email                  => email2
+  emailVisibility        => emailVisibility2
+  verified               => verified2
+  tokenKey               => tokenKey2
+  passwordHash           => passwordHash2
+  lastResetSentAt        => lastResetSentAt2
+  lastVerificationSentAt => lastVerificationSentAt2
+  ```
 
-# 1.8.0 (November 24, 2019)
+#### SDKs
 
-- Added a separate `remake.sass` helper styles file for:
-  - hiding `data-i-new` elements
-  - preserving multi-lines in multi-line editable elements
-  - show a dashed border around editable elements that have no content in them
-- Fix bug with `getWatchElements()` to support location keys
-- Make location keys look for a target before defaulting to the `innerText` of the current element
-- Allow any user to reset their password
-- Add app data to the top-level of template data, so you don't have to look inside a `data` object in a template
-- Fix sessions from expiring after 1 hour (now 30 days)
-- Change all user account routes (e.g. `/signup`, `/login`, `/forgot`) to be prepended with `/user` and move templates
-- Add a new `{{generateIdIfNone}}` Handlebars.js helper that will generate a random id for an element if it has none (this makes it possible to not create a JSON file in the `/data` directory for adding default data to new items and create the new template entirely inline on the page)
-- Made the nicely-designed Kanban app as the default starter application
+Please check the individual SDK package changelog and apply the necessary changes in your code:
 
-# 1.7.0 (November 18, 2019)
+- [**JavaScript SDK changelog**](https://github.com/pocketbase/js-sdk/blob/master/CHANGELOG.md)
+  ```sh
+  npm install pocketbase@latest --save
+  ```
 
-- Add support for handling deploys to a multi-tenant app
-  - Uploading app assets
-  - Authorizing users
-  - Sub-domain registration
-  - Limit deployments per user
-  - New `remake deploy` command
-  - New `--multitenant` flag for `remake create` command
-  - Better logging and user feedback from CLI
+- [**Dart SDK changelog**](https://github.com/pocketbase/dart-sdk/blob/master/CHANGELOG.md)
 
-# 1.6.0 (October 31, 2019)
+  ```sh
+  dart pub add pocketbase:^0.5.0
+  # or with Flutter:
+  flutter pub add pocketbase:^0.5.0
+  ```
 
-- Added support for sortable items. Instructions for how to enable: https://www.notion.so/hellounicorns/Docs-Sortable-Plugin-3cdd44ece76745faa1a6e043ef0c3a76
-- Fixed asset bundler bug. Changing Remake's client-side framework code (in `/_remake/client-side`) will now cause the asset bundler to recompile all the JS in `/app`. Before, it wasn't watching the code in `/_remake/client-side` at all.
+#### API
 
-# 1.5.0 (October 31, 2019)
+> _**You don't have to read this if you are using an official SDK.**_
 
-- Added support for multi-tenant mode, which allows running multiple Remake apps inside the same Remake instance. It reads template, partials, and data on the fly and caches nothing, so apps can be changed without reloading the server.
-  - To support this, we now have a `directory-helpers.js` library that fetches data and templates depending on which app you're in and takes into consideration if you're in a single-tenant instance
-  - Also, we parse the url params differently depending if you're in multi-tenant mode or not
-  - For a guide on how to set up a multi-tenant instance on your local machine, go here: https://www.notion.so/hellounicorns/Docs-Set-up-multi-tenant-Remake-instance-4ff53fac7a864d25bb3aaf6ddad4cf30
-- Each user's details now contains the app name that the user was created in
-- We parse the url parameters at a higher level (in `main.js`), so we can use them wherever we need them without having to parse them again
-- Created a new asset bundler that can transpile any file that doesn't start with an underscore (before where it just worked with `main.js` and `main.sass`). The new asset bundler also supports multi-tenant builds.
-- Added list of minimum supported browsers in `.babelrc`
+- The authorization schema is no longer necessary. Now it is auto detected from the JWT token payload:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>Authorization: Admin TOKEN</td>
+      <td>Authorization: TOKEN</td>
+    </tr>
+    <tr valign="top">
+      <td>Authorization: User TOKEN</td>
+      <td>Authorization: TOKEN</td>
+    </tr>
+  </table>
 
-# 1.4.0 (October 1, 2019)
+- All datetime stings are now returned in ISO8601 format - with _Z_ suffix and space as separator between the date and time part:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>2022-01-02 03:04:05.678</td>
+      <td>2022-01-02 03:04:05.678<strong>Z</strong></td>
+    </tr>
+  </table>
 
-- This repo no longer stores a copy of the Remake framework inside of it. When a project is created or updated, the framework code is downloaded from its GitHub repository. This means that, even if this CLI isn't up to date, it will still download the latest framework code.
-  - `remake create <project-dir>` now downloads the full framework starter project from GitHub
-  - `remake update-framework` now downloads the the framework code from GitHub and replaces it in the current directory
+- Removed the `@` prefix from the system record fields for easier json parsing:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td><strong>@</strong>collectionId</td>
+      <td>collectionId</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>@</strong>collectionName</td>
+      <td>collectionName</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>@</strong>expand</td>
+      <td>expand</td>
+    </tr>
+  </table>
 
-# 1.3.0 (September 27, 2019)
+- All users api handlers are moved under `/api/collections/:collection/`:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>
+        <em>GET /api/<strong>users</strong>/auth-methods</em>
+      </td>
+      <td>
+        <em>GET /api/<strong>collections/:collection</strong>/auth-methods</em>
+      </td>
+    </tr>
+    <tr valign="top">
+      <td>
+        <em>POST /api/<strong>users/refresh</strong></em>
+      </td>
+      <td>
+        <em>POST /api/<strong>collections/:collection/auth-refresh</strong></em>
+      </td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users/auth-via-oauth2</strong></em></td>
+      <td>
+        <em>POST /api/<strong>collections/:collection/auth-with-oauth2</strong></em>
+        <br/>
+        <em>You can now also pass optional <code>createData</code> object on OAuth2 sign-up.</em>
+        <br/>
+        <em>Also please note that now required user/profile fields are properly validated when creating new auth model on OAuth2 sign-up.</em>
+      </td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users/auth-via-email</strong></em></td>
+      <td>
+        <em>POST /api/<strong>collections/:collection/auth-with-password</strong></em>
+        <br/>
+        <em>Handles username/email + password authentication.</em>
+        <br/>
+        <code>{"identity": "usernameOrEmail", "password": "123456"}</code>
+      </td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/request-password-reset</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/request-password-reset</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/confirm-password-reset</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/confirm-password-reset</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/request-verification</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/request-verification</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/confirm-verification</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/confirm-verification</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/request-email-change</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/request-email-change</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong>/confirm-email-change</em></td>
+      <td><em>POST /api/<strong>collections/:collection</strong>/confirm-email-change</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>GET /api/<strong>users</strong></em></td>
+      <td><em>GET /api/<strong>collections/:collection/records</strong></em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>GET /api/<strong>users</strong>/:id</em></td>
+      <td><em>GET /api/<strong>collections/:collection/records</strong>/:id</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/<strong>users</strong></em></td>
+      <td><em>POST /api/<strong>collections/:collection/records</strong></em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>PATCH /api/<strong>users</strong>/:id</em></td>
+      <td><em>PATCH /api/<strong>collections/:collection/records</strong>/:id</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>DELETE /api/<strong>users</strong>/:id</em></td>
+      <td><em>DELETE /api/<strong>collections/:collection/records</strong>/:id</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>GET /api/<strong>users</strong>/:id/external-auths</em></td>
+      <td><em>GET /api/<strong>collections/:collection/records</strong>/:id/external-auths</em></td>
+    </tr>
+    <tr valign="top">
+      <td><em>DELETE /api/<strong>users</strong>/:id/external-auths/:provider</em></td>
+      <td><em>DELETE /api/<strong>collections/:collection/records</strong>/:id/external-auths/:provider</em></td>
+    </tr>
+  </table>
 
-- the `data-i-click-to-save` attribute doesn't need a value to work
-- editable popovers will be automatically suppressed if the user isn't logged in
-- if you're on a route with a unique id in it, a warning will pop up if there's no data key with an id that matches it
-- attributes are added to the `<body>` element to inform you the status of the app: `data-user-logged-in`, `data-user-not-logged-in`, `data-base-route`, `data-username-route`, `data-item-route`
-- the full handlebars helpers library has been added
-- the CLI now supports the command `remake update-framework` (however, the latest version of the CLI needs to be installed first)
+  _In relation to the above changes, the `user` property in the auth response is renamed to `record`._
 
-# 1.2.0 (September 14, 2019)
+- The admins api was also updated for consistency with the users api changes:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>
+        <em>POST /api/admins/<strong>refresh</strong></em>
+      </td>
+      <td>
+        <em>POST /api/admins/<strong>auth-refresh</strong></em>
+      </td>
+    </tr>
+    <tr valign="top">
+      <td><em>POST /api/admins/<strong>auth-via-email</strong></em></td>
+      <td>
+        <em>POST /api/admins/<strong>auth-with-password</strong></em>
+        <br />
+        <code>{"identity": "test@example.com", "password": "123456"}</code>
+        <br />
+        (notice that the <code>email</code> body field was renamed to <code>identity</code>)
+      </td>
+    </tr>
+  </table>
 
-- `data-i-new` doesn't require as many arguments now. It defaults to adding a new item to the closest `[data-o-type="list"]` element
-- `data-i-editable` doesn't require any arguments now. It defaults to creating an inline edit popover for all data on the current element
-- `data-o-save` is no longer required to save data. It defaults to saving data to the unique id specified in the closest `data-o-key-id` or, if none is found, it saves the entire page
-- `data-i-remove` and `data-i-hide` elements can exist outside of an inline edit popover. They find the closest element with data and remove the whole element or just clear its data.
-- There's now a list of reserved words that can't be used as a username (e.g. "admin")
-- (framework code) Bootstrap data is now assembled into an object that's separate from the partials' data
-- There's a new custom handlebars helper: `#forEachItem`. This allows you to define the name of an item inline instead of by using a partial. This makes it possible to make an app in a single template instead of being forced to use partials if you want to use the `data-i-new` attribute
-- There are three other new custom handlebars helpers: `#BaseRoute`, `#UsernameRoute`, `#ItemRoute`. These allow you to easily determine the type of route you're on when rendering your page.
+- To prevent confusion with the auth method responses, the following endpoints now returns 204 with empty body (previously 200 with token and auth model):
+  ```
+  POST /api/admins/confirm-password-reset
+  POST /api/collections/:collection/confirm-password-reset
+  POST /api/collections/:collection/confirm-verification
+  POST /api/collections/:collection/confirm-email-change
+  ```
 
-# 1.1.0 (August 22, 2019)
+- Renamed the "user" related settings fields returned by `GET /api/settings`:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td><strong>user</strong>AuthToken</td>
+      <td><strong>record</strong>AuthToken</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>user</strong>PasswordResetToken</td>
+      <td><strong>record</strong>PasswordResetToken</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>user</strong>EmailChangeToken</td>
+      <td><strong>record</strong>EmailChangeToken</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>user</strong>VerificationToken</td>
+      <td><strong>record</strong>VerificationToken</td>
+    </tr>
+  </table>
 
-- New option for `data-i` attribute: `data-i="triggerSaveOnChange"`. Makes it so when an `<input>`'s value changes, save its data
-- Replaced simple todos app in starter project with a multi todo lists app
+#### Internals
 
-# 1.0.0 (August 22, 2019)
+> _**You don't have to read this if you are not using PocketBase as framework.**_
 
-- Remake is now a CLI tool for generating a starter project instead of just a starter project
-- Moved Remake's front-end code inside the starter project instead of having it be a separate npm package
+- Removed `forms.New*WithConfig()` factories to minimize ambiguities.
+  If you need to pass a transaction Dao you can use the new `SetDao(dao)` method available to the form instances.
+
+- `forms.RecordUpsert.LoadData(data map[string]any)` now can bulk load external data from a map.
+  To load data from a request instance, you could use `forms.RecordUpsert.LoadRequest(r, optKeysPrefix = "")`.
+
+- `schema.RelationOptions.MaxSelect` has new type `*int` (_you can use the new `types.Pointer(123)` helper to assign pointer values_).
+
+- Renamed the constant `apis.ContextUserKey` (_"user"_) to `apis.ContextAuthRecordKey` (_"authRecord"_).
+
+- Replaced user related middlewares with their auth record alternative:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>apis.Require<strong>User</strong>Auth()</td>
+      <td>apis.Require<strong>Record</strong>Auth(<strong>optCollectionNames ...string</strong>)</td>
+    </tr>
+    <tr valign="top">
+      <td>apis.RequireAdminOr<strong>User</strong>Auth()</td>
+      <td>apis.RequireAdminOr<strong>Record</strong>Auth(<strong>optCollectionNames ...string</strong>)</td>
+    </tr>
+    <tr valign="top">
+      <td>N/A</td>
+      <td>
+        <strong>RequireSameContextRecordAuth()</strong>
+        <br/>
+        <em>(requires the auth record to be from the same context collection)</em>
+      </td>
+    </tr>
+  </table>
+
+- The following record Dao helpers now uses the collection id or name instead of `*models.Collection` instance to reduce the verbosity when fetching records:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindRecordById(<strong>collection</strong>, ...)</td>
+      <td>dao.FindRecordById(<strong>collectionNameOrId</strong>, ...)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindRecordsByIds(<strong>collection</strong>, ...)</td>
+      <td>dao.FindRecordsByIds(<strong>collectionNameOrId</strong>, ...)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindRecordsByExpr(<strong>collection</strong>, ...)</td>
+      <td>dao.FindRecordsByExpr(<strong>collectionNameOrId</strong>, ...)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindFirstRecordByData(<strong>collection</strong>, ...)</td>
+      <td>dao.FindFirstRecordByData(<strong>collectionNameOrId</strong>, ...)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.IsRecordValueUnique(<strong>collection</strong>, ...)</td>
+      <td>dao.IsRecordValueUnique(<strong>collectionNameOrId</strong>, ...)</td>
+    </tr>
+  </table>
+
+- Replaced all User related Dao helpers with Record equivalents:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>dao.UserQuery()</td>
+      <td>dao.RecordQuery(collection)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindUserById(id)</td>
+      <td>dao.FindRecordById(collectionNameOrId, id)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindUserByToken(token, baseKey)</td>
+      <td>dao.FindAuthRecordByToken(token, baseKey)</td>
+    </tr>
+    <tr valign="top">
+      <td>dao.FindUserByEmail(email)</td>
+      <td>dao.FindAuthRecordByEmail(collectionNameOrId, email)</td>
+    </tr>
+    <tr valign="top">
+      <td>N/A</td>
+      <td>dao.FindAuthRecordByUsername(collectionNameOrId, username)</td>
+    </tr>
+  </table>
+
+- Moved the formatted `ApiError` struct and factories to the `github.com/pocketbase/pocketbase/apis` subpackage:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td colspan="2"><em>Import path</em></td>
+    </tr>
+    <tr valign="top">
+      <td>github.com/pocketbase/pocketbase/<strong>tools/rest</strong></td>
+      <td>github.com/pocketbase/pocketbase/<strong>apis</strong></td>
+    </tr>
+    <tr valign="top">
+      <td colspan="2"><em>Fields</em></td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.ApiError{}</td>
+      <td><strong>apis</strong>.ApiError{}</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.NewNotFoundError()</td>
+      <td><strong>apis</strong>.NewNotFoundError()</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.NewBadRequestError()</td>
+      <td><strong>apis</strong>.NewBadRequestError()</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.NewForbiddenError()</td>
+      <td><strong>apis</strong>.NewForbiddenError()</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.NewUnauthorizedError()</td>
+      <td><strong>apis</strong>.NewUnauthorizedError()</td>
+    </tr>
+    <tr valign="top">
+      <td><strong>rest</strong>.NewApiError()</td>
+      <td><strong>apis</strong>.NewApiError()</td>
+    </tr>
+  </table>
+
+- Renamed `models.Record` helper getters:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>Set<strong>DataValue</strong></td>
+      <td>Set</td>
+    </tr>
+    <tr valign="top">
+      <td>Get<strong>DataValue</strong></td>
+      <td>Get</td>
+    </tr>
+    <tr valign="top">
+      <td>GetBool<strong>DataValue</strong></td>
+      <td>GetBool</td>
+    </tr>
+    <tr valign="top">
+      <td>GetString<strong>DataValue</strong></td>
+      <td>GetString</td>
+    </tr>
+    <tr valign="top">
+      <td>GetInt<strong>DataValue</strong></td>
+      <td>GetInt</td>
+    </tr>
+    <tr valign="top">
+      <td>GetFloat<strong>DataValue</strong></td>
+      <td>GetFloat</td>
+    </tr>
+    <tr valign="top">
+      <td>GetTime<strong>DataValue</strong></td>
+      <td>GetTime</td>
+    </tr>
+    <tr valign="top">
+      <td>GetDateTime<strong>DataValue</strong></td>
+      <td>GetDateTime</td>
+    </tr>
+    <tr valign="top">
+      <td>GetStringSlice<strong>DataValue</strong></td>
+      <td>GetStringSlice</td>
+    </tr>
+  </table>
+
+- Added new auth collection `models.Record` helpers:
+  ```go
+  func (m *Record) Username() string
+  func (m *Record) SetUsername(username string) error
+  func (m *Record) Email() string
+  func (m *Record) SetEmail(email string) error
+  func (m *Record) EmailVisibility() bool
+  func (m *Record) SetEmailVisibility(visible bool) error
+  func (m *Record) IgnoreEmailVisibility(state bool)
+  func (m *Record) Verified() bool
+  func (m *Record) SetVerified(verified bool) error
+  func (m *Record) TokenKey() string
+  func (m *Record) SetTokenKey(key string) error
+  func (m *Record) RefreshTokenKey() error
+  func (m *Record) LastResetSentAt() types.DateTime
+  func (m *Record) SetLastResetSentAt(dateTime types.DateTime) error
+  func (m *Record) LastVerificationSentAt() types.DateTime
+  func (m *Record) SetLastVerificationSentAt(dateTime types.DateTime) error
+  func (m *Record) ValidatePassword(password string) bool
+  func (m *Record) SetPassword(password string) error
+  ```
+
+- Added option to return serialized custom `models.Record` fields data:
+  ```go
+  func (m *Record) UnknownData() map[string]any
+  func (m *Record) WithUnkownData(state bool)
+  ```
+
+- Deleted `model.User`. Now the user data is stored as an auth `models.Record`.
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>User.Email</td>
+      <td>Record.Email()</td>
+    </tr>
+    <tr valign="top">
+      <td>User.TokenKey</td>
+      <td>Record.TokenKey()</td>
+    </tr>
+    <tr valign="top">
+      <td>User.Verified</td>
+      <td>Record.Verified()</td>
+    </tr>
+    <tr valign="top">
+      <td>User.SetPassword()</td>
+      <td>Record.SetPassword()</td>
+    </tr>
+    <tr valign="top">
+      <td>User.RefreshTokenKey()</td>
+      <td>Record.RefreshTokenKey()</td>
+    </tr>
+    <tr valign="top">
+      <td colspan="2"><em>etc.</em></td>
+    </tr>
+  </table>
+
+- Replaced `User` related event hooks with their `Record` alternative:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerBefore<strong>User</strong>ResetPasswordSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerBefore<strong>Record</strong>ResetPasswordSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerAfter<strong>User</strong>ResetPasswordSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerAfter<strong>Record</strong>ResetPasswordSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerBefore<strong>User</strong>VerificationSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerBefore<strong>Record</strong>VerificationSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerAfter<strong>User</strong>VerificationSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerAfter<strong>Record</strong>VerificationSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerBefore<strong>User</strong>ChangeEmailSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerBefore<strong>Record</strong>ChangeEmailSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>OnMailerAfter<strong>User</strong>ChangeEmailSend() *hook.Hook[*Mailer<strong>User</strong>Event]</td>
+      <td>OnMailerAfter<strong>Record</strong>ChangeEmailSend() *hook.Hook[*Mailer<strong>Record</strong>Event]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>Users</strong>ListRequest() *hook.Hook[*<strong>User</strong>ListEvent]</td>
+      <td>On<strong>Records</strong>ListRequest() *hook.Hook[*<strong>Records</strong>ListEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>ViewRequest() *hook.Hook[*<strong>User</strong>ViewEvent]</td>
+      <td>On<strong>Record</strong>ViewRequest() *hook.Hook[*<strong>Record</strong>ViewEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>BeforeCreateRequest() *hook.Hook[*<strong>User</strong>CreateEvent]</td>
+      <td>On<strong>Record</strong>BeforeCreateRequest() *hook.Hook[*<strong>Record</strong>CreateEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>AfterCreateRequest() *hook.Hook[*<strong>User</strong>CreateEvent]</td>
+      <td>On<strong>Record</strong>AfterCreateRequest() *hook.Hook[*<strong>Record</strong>CreateEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>BeforeUpdateRequest() *hook.Hook[*<strong>User</strong>UpdateEvent]</td>
+      <td>On<strong>Record</strong>BeforeUpdateRequest() *hook.Hook[*<strong>Record</strong>UpdateEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>AfterUpdateRequest() *hook.Hook[*<strong>User</strong>UpdateEvent]</td>
+      <td>On<strong>Record</strong>AfterUpdateRequest() *hook.Hook[*<strong>Record</strong>UpdateEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>BeforeDeleteRequest() *hook.Hook[*<strong>User</strong>DeleteEvent]</td>
+      <td>On<strong>Record</strong>BeforeDeleteRequest() *hook.Hook[*<strong>Record</strong>DeleteEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>AfterDeleteRequest() *hook.Hook[*<strong>User</strong>DeleteEvent]</td>
+      <td>On<strong>Record</strong>AfterDeleteRequest() *hook.Hook[*<strong>Record</strong>DeleteEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>AuthRequest() *hook.Hook[*<strong>User</strong>AuthEvent]</td>
+      <td>On<strong>Record</strong>AuthRequest() *hook.Hook[*<strong>Record</strong>AuthEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>ListExternalAuths() *hook.Hook[*<strong>User</strong>ListExternalAuthsEvent]</td>
+      <td>On<strong>Record</strong>ListExternalAuths() *hook.Hook[*<strong>Record</strong>ListExternalAuthsEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>BeforeUnlinkExternalAuthRequest() *hook.Hook[*<strong>User</strong>UnlinkExternalAuthEvent]</td>
+      <td>On<strong>Record</strong>BeforeUnlinkExternalAuthRequest() *hook.Hook[*<strong>Record</strong>UnlinkExternalAuthEvent]</td>
+    </tr>
+    <tr valign="top">
+      <td>On<strong>User</strong>AfterUnlinkExternalAuthRequest() *hook.Hook[*<strong>User</strong>UnlinkExternalAuthEvent]</td>
+      <td>On<strong>Record</strong>AfterUnlinkExternalAuthRequest() *hook.Hook[*<strong>Record</strong>UnlinkExternalAuthEvent]</td>
+    </tr>
+  </table>
+
+- Replaced `forms.UserEmailLogin{}` with `forms.RecordPasswordLogin{}` (for both username and email depending on which is enabled for the collection).
+
+- Renamed user related `core.Settings` fields:
+  <table class="d-table" width="100%">
+    <tr>
+      <th>Old</th>
+      <th>New</th>
+    </tr>
+    <tr valign="top">
+      <td>core.Settings.<strong>User</strong>AuthToken{}</td>
+      <td>core.Settings.<strong>Record</strong>AuthToken{}</td>
+    </tr>
+    <tr valign="top">
+      <td>core.Settings.<strong>User</strong>PasswordResetToken{}</td>
+      <td>core.Settings.<strong>Record</strong>PasswordResetToken{}</td>
+    </tr>
+    <tr valign="top">
+      <td>core.Settings.<strong>User</strong>EmailChangeToken{}</td>
+      <td>core.Settings.<strong>Record</strong>EmailChangeToken{}</td>
+    </tr>
+    <tr valign="top">
+      <td>core.Settings.<strong>User</strong>VerificationToken{}</td>
+      <td>core.Settings.<strong>Record</strong>VerificationToken{}</td>
+    </tr>
+  </table>
+
+- Marked as "Deprecated" and will be removed in v0.9+:
+    ```
+    core.Settings.EmailAuth{}
+    core.EmailAuthConfig{}
+    schema.FieldTypeUser
+    schema.UserOptions{}
+    ```
+
+- The second argument of `apis.StaticDirectoryHandler(fileSystem, enableIndexFallback)` now is used to enable/disable index.html forwarding on missing file (eg. in case of SPA).
