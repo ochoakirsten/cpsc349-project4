@@ -1,11 +1,11 @@
-# CPSC 349 Project 2 - Remake
+# CPSC 349 Project 4 - Working With a Back-End
 
 ## Group 21 Members
 
-- Clemente Solorio (clem@csu.fullerton.edu)
-- Jason Angel (jasonangel@csu.fullerton.edu)
 - Kirsten Ochoa (ochoakirsten@csu.fullerton.edu)
-- Sarthak Gajjar (sarthakgajjar@csu.fullerton.edu)
+- Chingsan Ly 
+- Alex Ly
+- Emmanuel Salcedo
 
 ## Project Info
 
